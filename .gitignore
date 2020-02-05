@@ -1,0 +1,7 @@
+.vscode
+build
+.conan
+slides.pdf
+slides.pptx
+activate.sh
+.DS_Store
