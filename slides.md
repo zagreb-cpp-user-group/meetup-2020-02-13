@@ -38,7 +38,7 @@ From [Microsoft](https://www.zdnet.com/article/microsoft-70-percent-of-all-secur
 
 # Compiler support
 
-- partial support in MSVC with Visual Studio 2019
+- partial support in MSVC with [Visual Studio 2019](https://devblogs.microsoft.com/cppblog/lifetime-profile-update-in-visual-studio-2019-preview-2/)
 - Clang implementation by Gábor Horváth and Matthias Gehre
     - available on Compiler Explorer
     - will be part of official Clang 10 release
@@ -131,6 +131,83 @@ std::cout << firstElem;     // error: dereferencing a dangling pointer
 - assumptions
     - function returns values that are derived from its arguments
     - inputs are valid
+
+---
+
+# Functions calls analysis
+
+```c++
+std::string_view foo( std::string const & s1, std::string const & s2 );
+
+void myFunc() {
+    std::string_view sv;
+    sv = foo( "tmp1", "tmp2" );	// C: in: pset(arg1) = {__tmp1'}, pset(arg2) = {__tmp2'}
+                                // ... so assume: pset(sv) = {__tmp1', __tmp2'}  [the union]
+                                // ... and then at the end of this statement, __tmp1 and
+                                //     __tmp2 are destroyed, so pset(sv) = {invalid}
+    cout << sv[0];              // D: error: ‘s[0]’ is illegal, s was invalidated when
+                                //   ‘__tmp1’ went out of scope on line C (path: C,D)
+}
+```
+[Godbolt link](https://godbolt.org/z/wMjEHj)
+
+---
+
+# What if first assumption does not hold?
+
+```c++
+std::string_view foo( std::string const & s1, std::string const &) {
+    return s1;
+}
+
+void myFunc() {
+    std::string_view sv;
+    std::string s1 = "tmp1";
+    sv = foo( s1, "tmp2" );
+    std::cout << sv[0];         // false positive
+}
+```
+
+[Godbolt link](https://godbolt.org/z/yWlEIM)
+
+---
+
+# Solution
+
+```c++
+std::string_view foo( std::string const & s1, std::string const &)
+[[ gsl::post( lifetime( foo, { s1 } ) ) ]]
+{
+    return s1;
+}
+
+void myFunc() {
+    std::string_view sv;
+    std::string s1 = "tmp1";
+    sv = foo( s1, "tmp2" );
+    std::cout << sv[0];
+}
+```
+
+---
+
+# Limitations
+
+- not possible to detect race conditions or global variable change - [Godbold link](https://godbolt.org/z/jtmFnL)
+
+```c++
+std::string_view foo() {
+    static std::string local = some_value();
+    if ( sometimes() ) local = some_other_value();
+    return local;
+}
+void example() {
+    std::string_view sv = foo();
+    std::cout << sv[0];             // ok
+    std::string_view sv2 = foo();
+    std::cout << sv[0];             // not ok, but can't be detected
+}
+```
 
 ---
 
