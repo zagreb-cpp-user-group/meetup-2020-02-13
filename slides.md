@@ -156,7 +156,7 @@ void myFunc() {
 # What if first assumption does not hold?
 
 ```c++
-std::string_view foo( std::string const & s1, std::string const &) {
+std::string_view foo( std::string const & s1, std::string const & ) {
     return s1;
 }
 
@@ -175,7 +175,7 @@ void myFunc() {
 # Solution
 
 ```c++
-std::string_view foo( std::string const & s1, std::string const &)
+std::string_view foo( std::string const & s1, std::string const & )
 [[ gsl::post( lifetime( foo, { s1 } ) ) ]]
 {
     return s1;
@@ -211,14 +211,141 @@ void example() {
 
 ---
 
-# TODO:
-- more examples
-    - initializer_list
-    - string_view substring
-    - custom owner/pointer classes
-    - capturing lambda
-- references to CppCon and LLVM conference talks
-- reference to paper
+# Custom pointers
+
+- using `[[ gsl::Pointer( T ) ]]` attribute
+
+```c++
+class [[ gsl::Pointer( std::string ) ]] LazyToUpper {
+private:
+    std::string const & originalString_;
+public:
+    LazyToUpper( std::string const & s ) :
+        originalString_( s ) {}
+    std::string uppercase() const;
+};
+```
+
+[Godbold link](https://godbolt.org/z/hcq6iS)
+
+---
+
+# Custom owners
+
+- using `[[ gsl::Owner( T ) ]]` attribute
+
+```c++
+template< typename T, std::size_t N >
+class [[ gsl::Owner( T ) ]] SmallVector {
+    [...]
+};
+```
+
+---
+
+<!-- _class: quote-large -->
+
+# Some examples
+
+---
+
+# What does this program print?
+
+```c++
+template< typename ... T >
+auto pack( T ... args ) {
+    return std::initializer_list< int >{ args ... };
+}
+
+int main() {
+    for ( auto i : pack( 1, 2, 3, 4, 5 ) ) {
+        std::cout << i << ' ';
+    }
+    return 0;
+}
+```
+
+[Godbolt link](https://godbolt.org/z/62HCW6)
+
+---
+
+# Classical junior developer bug - can you spot it?
+
+```c++
+#include <string>
+
+char const * f( std::string const str ) {
+    return str.c_str();
+}
+```
+
+[Godbolt link](https://godbolt.org/z/ysQc5v)
+
+---
+
+# Substring of string_view
+
+```c++
+std::string_view substring_view( std::string_view const s, unsigned pos, unsigned len ) {
+    return { s.begin() + pos, len };
+}
+
+std::string getString() { return "A long string"; }
+
+int main() {
+    auto substr = substring_view( getString(), 2, 4 );
+    std::cout << substr << std::endl;
+    return 0;
+}
+```
+
+[Godbolt link](https://godbolt.org/z/8-rLjk)
+
+---
+
+# What is printed?
+
+```c++
+struct A {
+    int p = 100;
+};
+std::unique_ptr< A > myFun() {
+    std::unique_ptr< A > pa( new A() );
+    return pa;
+}
+int main() {
+    A const & rA = *myFun();
+    std::cout << rA.p;
+}
+```
+[Godbolt link](https://godbolt.org/z/SHaSPF)
+
+---
+
+# Can I use it?
+
+- both clang and MSVC still have partial implementations
+    - not detecing lambda captures of local variables
+    - no support for lifetime pre- and post-conditions
+    - no support for exception handling paths analysis
+    - no support for coroutines
+- Clang 10 will have this enabled by default
+    - although only working checks
+
+---
+
+# References:
+
+- [Herb Sutter's paper](https://github.com/isocpp/CppCoreGuidelines/blob/master/docs/Lifetime.pdf)
+- [Lifetime analysis for everyone, CppCon 2019](https://youtu.be/d67kfSnhbpA)
+- [Implementing the C++ Core Guidelines’ Lifetime Safety Profile in Clang, CppCon 2018](https://youtu.be/sjnp3P9x5jA)
+- [Implementing the C++ Core Guidelines’ Lifetime Safety Profile in Clang, 2019 EuroLLVM Developers’ Meeting](https://youtu.be/VynWyOIb6Bk)
+
+---
+
+<!-- _class: quote-large -->
+
+# Questions?
 
 ---
 
