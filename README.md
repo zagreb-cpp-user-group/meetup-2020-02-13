@@ -1,4 +1,4 @@
-# Zagreb C++ Mettup 2020-02-13
+# Zagreb C++ Meetup 2020-02-13
 
 This repository contains code samples and presentation slides shown during C++ meetup on February 13th, 2020.
 
