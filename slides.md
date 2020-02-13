@@ -351,4 +351,14 @@ int main() {
 
 <!-- _class: quote-large -->
 
+# Conan Days 2020
+
+- March 19-20, Madrid, Spain
+- 20% discount for [the tickets](https://www.eventbrite.com/e/conandays-2020-gathering-the-tribes-tickets-75869891889)
+    - use the code `ConanTalk20` during checkout
+
+---
+
+<!-- _class: quote-large -->
+
 # Thank you
